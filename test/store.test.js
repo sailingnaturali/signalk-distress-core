@@ -70,6 +70,22 @@ test('findRecent locates the newest matching event inside the window', () => {
   );
 });
 
+test('findRecent measures recency from lastReceivedAt when a repeat has bumped it', () => {
+  // A survival beacon transmits for far longer than the dedupe window. Repeats
+  // slide the window forward via lastReceivedAt, so the same stored event keeps
+  // matching hours after its original receivedAt — otherwise a fresh event is
+  // minted every window (re-alarming, and losing an operator's clear).
+  const store = new EventStore({ filePath: tmpFile() });
+  const ev = store.add({ mmsi: '974321098', receivedAt: '2026-06-06T12:00:00.000Z' });
+  store.update(ev.id, { lastReceivedAt: '2026-06-06T12:20:00.000Z' });
+  const found = store.findRecent(
+    (e) => e.mmsi === '974321098',
+    new Date('2026-06-06T12:21:00.000Z').getTime(), // 21 min past receivedAt, 1 min past lastReceivedAt
+    5 * 60 * 1000
+  );
+  assert.equal(found && found.id, ev.id);
+});
+
 test('corrupt lines in the log are skipped, not fatal', () => {
   const file = tmpFile();
   fs.writeFileSync(file, '{"id":"a","mmsi":"111111111","receivedAt":"2026-06-06T12:00:00.000Z"}\nnot json\n');

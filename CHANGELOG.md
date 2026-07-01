@@ -4,6 +4,25 @@ All notable changes to `@sailingnaturali/signalk-distress-core` are documented h
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0]
+
+### Fixed
+
+- `EventStore.findRecent` now measures recency from `lastReceivedAt` (falling
+  back to `receivedAt`), so a beacon that keeps transmitting slides its own
+  dedupe window forward instead of a fresh event being minted every window.
+  Previously a continuous survival beacon re-alarmed every window and defeated
+  an operator's clear once the original `receivedAt` aged out.
+
+### Changed
+
+- `createNotifier(...).reannounce(events, { window, now, prepare })` re-raises
+  the **newest** still-fresh, uncleared event per notification path (was oldest),
+  measures freshness from `lastReceivedAt || receivedAt`, and runs the optional
+  `prepare(event)` hook before each raise so callers can rebuild the spoken
+  message against the current own-ship position. `signalk-ais-distress` and
+  `signalk-dsc` can now drop their duplicated inline reannounce loops.
+
 ## [0.2.0]
 
 ### Added

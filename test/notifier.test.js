@@ -47,3 +47,42 @@ test('reannounce re-raises only uncleared events within the window, once per pat
   assert.equal(app.deltas.length, 1);
   assert.equal(app.deltas[0].d.updates[0].values[0].path, 'notifications.ais.distress.epirb');
 });
+
+test('reannounce measures freshness from lastReceivedAt when a repeat has bumped it', () => {
+  const app = fakeApp();
+  const n = createNotifier({
+    app, pluginId: 'test',
+    pathFor: (e) => `notifications.ais.distress.${e.deviceBeacon}`,
+    stateFor: () => 'emergency',
+  });
+  const now = Date.parse('2026-06-30T20:00:00.000Z');
+  // First heard long ago, but still transmitting a minute ago → still fresh.
+  const beacon = {
+    deviceBeacon: 'epirb', message: 'm',
+    receivedAt: '2026-06-30T17:00:00.000Z',
+    lastReceivedAt: '2026-06-30T19:59:00.000Z',
+  };
+  n.reannounce([beacon], { window: 60 * 60 * 1000, now });
+  assert.equal(app.deltas.length, 1);
+});
+
+test('reannounce re-raises the newest event per path and runs prepare on it first', () => {
+  const app = fakeApp();
+  const n = createNotifier({
+    app, pluginId: 'test',
+    pathFor: (e) => `notifications.ais.distress.${e.deviceBeacon}`,
+    stateFor: () => 'emergency',
+  });
+  const now = Date.parse('2026-06-30T20:00:00.000Z');
+  const older = { deviceBeacon: 'epirb', receivedAt: '2026-06-30T19:50:00.000Z' };
+  const newer = { deviceBeacon: 'epirb', receivedAt: '2026-06-30T19:59:00.000Z' };
+  const prepared = [];
+  n.reannounce([older, newer], {
+    window: 60 * 60 * 1000, now,
+    prepare: (e) => { prepared.push(e); e.message = `refreshed ${e.receivedAt}`; },
+  });
+  assert.equal(app.deltas.length, 1);
+  assert.equal(prepared.length, 1);
+  assert.equal(prepared[0], newer); // newest wins
+  assert.equal(app.deltas[0].d.updates[0].values[0].value.message, 'refreshed 2026-06-30T19:59:00.000Z');
+});
