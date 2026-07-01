@@ -1,0 +1,12 @@
+{
+  "name": "@sailingnaturali/signalk-distress-core",
+  "version": "0.1.0",
+  "description": "Shared distress plumbing (event store, chart markers, spoken/logbook rendering, notifications) for SignalK distress plugins.",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "index.js",
+  "files": ["index.js", "lib/"],
+  "scripts": { "test": "node --test" },
+  "repository": { "type": "git", "url": "git+https://github.com/sailingnaturali/signalk-distress-core.git" },
+  "publishConfig": { "access": "public" }
+}
