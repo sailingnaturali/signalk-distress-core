@@ -12,4 +12,5 @@ helpers, shared identity/nature constants, and a notification manager. Consumed 
 - `buildMarkerResourceSets(events, opts)` — Freeboard ResourceSets (bucket/label/colors injectable)
 - `buildMessage` / `buildLogbookText` — source-aware (DSC + AIS) rendering
 - `createNotifier({ app, pluginId, pathFor, stateFor })` — raise/clear/reannounce
+- `writeLogbookEntry({ url, token, text, observations, extra })` — POST a radio-log entry to signalk-logbook
 - `deviceBeaconFor`, `NATURES`, `NATURE_TEXT`, geo + snapshot helpers

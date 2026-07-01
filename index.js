@@ -7,6 +7,7 @@ const constants = require('./lib/constants');
 const { buildMarkerResourceSets, CATEGORY_COLORS } = require('./lib/markers');
 const { buildMessage, buildLogbookText, formatPosition } = require('./lib/format');
 const { createNotifier } = require('./lib/notifier');
+const { writeLogbookEntry } = require('./lib/logbook');
 
 module.exports = {
   ...geo,
@@ -19,4 +20,5 @@ module.exports = {
   buildLogbookText,
   formatPosition,
   createNotifier,
+  writeLogbookEntry,
 };
