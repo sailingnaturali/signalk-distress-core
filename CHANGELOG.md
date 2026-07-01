@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `prepare(event)` hook before each raise so callers can rebuild the spoken
   message against the current own-ship position. `signalk-ais-distress` and
   `signalk-dsc` can now drop their duplicated inline reannounce loops.
+- `createNotifier(...).raise` is a no-op when `stateFor` yields a falsy state
+  (a non-alarming category such as DSC routine/unknown), and carries the
+  event's `receivedAt` as the notification `timestamp` when present. This lets
+  `signalk-dsc` retire its hand-rolled notification delta and share `raise`.
 
 ## [0.2.0]
 

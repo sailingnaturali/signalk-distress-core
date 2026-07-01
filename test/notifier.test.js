@@ -23,6 +23,25 @@ test('raise emits a notification delta at the event path and state', () => {
   assert.equal(v.value.message, 'AIS EPIRB beacon');
 });
 
+test('raise is a no-op when stateFor yields no state (non-alarming category)', () => {
+  const app = fakeApp();
+  const n = createNotifier({
+    app, pluginId: 'test',
+    pathFor: (e) => `notifications.dsc.${e.category}`,
+    stateFor: (e) => ({ distress: 'emergency' })[e.category],
+  });
+  const path = n.raise({ category: 'routine', message: 'm', receivedAt: '2026-06-30T20:00:00.000Z' });
+  assert.equal(app.deltas.length, 0);
+  assert.equal(path, undefined);
+});
+
+test('raise carries the event receivedAt as the notification timestamp', () => {
+  const app = fakeApp();
+  const n = createNotifier({ app, pluginId: 'test', pathFor: () => 'notifications.x', stateFor: () => 'emergency' });
+  n.raise({ message: 'm', receivedAt: '2026-06-30T20:00:00.000Z' });
+  assert.equal(app.deltas[0].d.updates[0].values[0].value.timestamp, '2026-06-30T20:00:00.000Z');
+});
+
 test('clear emits a null value at the given path', () => {
   const app = fakeApp();
   const n = createNotifier({ app, pluginId: 'test', pathFor: () => 'x', stateFor: () => 'emergency' });
