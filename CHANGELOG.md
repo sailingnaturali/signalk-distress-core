@@ -4,6 +4,15 @@ All notable changes to `@sailingnaturali/signalk-distress-core` are documented h
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0]
+
+### Added
+
+- `buildMessage` / `buildLogbookText` render AIS Msg 14 safety-related broadcasts
+  (`kind: 'safetyBroadcast'`) — spoken as "AIS MAYDAY relay / urgency broadcast /
+  safety broadcast" by category, plus a GMDSS-style logbook line — so
+  `signalk-ais-distress` can alarm on coast-station relay text.
+
 ## [0.3.0]
 
 ### Fixed
