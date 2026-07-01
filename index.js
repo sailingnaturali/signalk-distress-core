@@ -6,6 +6,7 @@ const { EventStore } = require('./lib/store');
 const constants = require('./lib/constants');
 const { buildMarkerResourceSets, CATEGORY_COLORS } = require('./lib/markers');
 const { buildMessage, buildLogbookText, formatPosition } = require('./lib/format');
+const { createNotifier } = require('./lib/notifier');
 
 module.exports = {
   ...geo,
@@ -17,4 +18,5 @@ module.exports = {
   buildMessage,
   buildLogbookText,
   formatPosition,
+  createNotifier,
 };
