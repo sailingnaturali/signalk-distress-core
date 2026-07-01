@@ -126,3 +126,18 @@ test('AIS logbook entry records device type, MMSI and position', () => {
   assert.match(text, /MMSI 974321098/);
   assert.match(text, /48°47\.700′N 123°15\.900′W/);
 });
+
+const MSG14_DISTRESS = { source: 'ais', kind: 'safetyBroadcast', category: 'distress', mmsi: '003160001', text: 'MAYDAY RELAY, s/v Blue Heron 2NM S of Sidney' };
+const MSG14_URGENCY = { source: 'ais', kind: 'safetyBroadcast', category: 'urgency', mmsi: '003160001', text: 'PAN PAN, disabled vessel' };
+const MSG14_SAFETY = { source: 'ais', kind: 'safetyBroadcast', category: 'safety', mmsi: '003160001', text: 'SECURITE, buoy adrift' };
+
+test('AIS safety broadcast is spoken with its procedure-word lead and text', () => {
+  assert.equal(buildMessage(MSG14_DISTRESS, {}), 'AIS MAYDAY relay: MAYDAY RELAY, s/v Blue Heron 2NM S of Sidney. Monitor channel 16.');
+  assert.match(buildMessage(MSG14_URGENCY, {}), /^AIS urgency broadcast: PAN PAN, /);
+  assert.match(buildMessage(MSG14_SAFETY, {}), /^AIS safety broadcast: SECURITE, /);
+});
+
+test('AIS safety broadcast logbook entry names the station and carries the text', () => {
+  const text = buildLogbookText(MSG14_DISTRESS, {});
+  assert.match(text, /^\[AIS\] AIS MAYDAY RELAY broadcast from MMSI 003160001: MAYDAY RELAY, /);
+});
