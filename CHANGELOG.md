@@ -4,6 +4,23 @@ All notable changes to `@sailingnaturali/signalk-distress-core` are documented h
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1]
+
+### Fixed
+
+- Stale flusher restart race: after `stop()` is called while a fetch is in-flight,
+  the resolving `await` no longer calls `queue.shift()` / `persist()`, preventing a
+  restarted plugin's queue file from being overwritten by the previous instance.
+  The in-flight entry stays queued for the new instance; the backend deduplicates
+  any duplicate POST.
+
+### Added
+
+- Per-request fetch timeout (`fetchTimeoutMs`, default 30 s) passed as
+  `AbortSignal.timeout(fetchTimeoutMs)` to every POST, so a black-holed marine link
+  does not stall the flusher indefinitely. An aborted request takes the existing
+  network-error path (keep entry, backoff, retry).
+
 ## [0.5.0]
 
 ### Added

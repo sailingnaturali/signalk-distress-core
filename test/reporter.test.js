@@ -244,6 +244,43 @@ test('maxQueue caps growth by dropping oldest', async () => {
   reporter.stop();
 });
 
+test('stop() during an in-flight POST: the stale flusher never touches the queue file', async () => {
+  const queueFile = tmpQueue();
+  let resolveFetch;
+  const gate = new Promise((r) => (resolveFetch = r));
+  const calls = [];
+  const impl = async (url, opts) => {
+    calls.push(JSON.parse(opts.body));
+    await gate; // hold the POST in flight
+    return { ok: true, status: 201 };
+  };
+  const reporter = createReporter({ url: 'u', userAgent: 'ua', queueFile, fetchImpl: impl });
+  reporter.start();
+  reporter.report({ seq: 0 });
+  await eventually(() => assert.equal(calls.length, 1)); // fetch is in flight
+  reporter.stop(); // plugin restart: a new instance may now own the file
+  fs.appendFileSync(queueFile, JSON.stringify({ seq: 99 }) + '\n'); // new instance's append
+  resolveFetch(); // stale POST finally resolves
+  await new Promise((r) => setTimeout(r, 50));
+  const onDisk = fs.readFileSync(queueFile, 'utf8').trim().split('\n').map((l) => JSON.parse(l).seq);
+  assert.deepEqual(onDisk, [0, 99]); // stale flusher must NOT have shifted/persisted
+});
+
+test('fetch options carry a signal (AbortSignal) for timeout', async () => {
+  const queueFile = tmpQueue();
+  let capturedSignal;
+  const impl = async (url, opts) => {
+    capturedSignal = opts.signal;
+    return { ok: true, status: 201 };
+  };
+  const reporter = createReporter({ url: 'u', userAgent: 'ua', queueFile, fetchImpl: impl, fetchTimeoutMs: 5000 });
+  reporter.start();
+  reporter.report({ n: 1 });
+  await eventually(() => assert.ok(capturedSignal !== undefined));
+  assert.ok(capturedSignal instanceof AbortSignal, 'signal must be an AbortSignal');
+  reporter.stop();
+});
+
 test('loadOrCreateReceiverKey mints a lowercase UUID once and reuses it', () => {
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rk-')), 'dscwatch-receiver-key');
   const key = loadOrCreateReceiverKey(file);
