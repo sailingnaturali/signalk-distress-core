@@ -98,3 +98,95 @@ test('reports enqueued before start() flush on start()', async () => {
   await eventually(() => assert.equal(calls.length, 1));
   reporter.stop();
 });
+
+test('400 is dropped without retry; the next report still delivers', async () => {
+  const queueFile = tmpQueue();
+  const { impl, calls } = mockFetch((call) =>
+    call.body.bad ? { ok: false, status: 400 } : { ok: true, status: 201 }
+  );
+  const dropped = [];
+  const reporter = createReporter({
+    url: 'u', userAgent: 'ua', queueFile, fetchImpl: impl,
+    log: (m) => dropped.push(m),
+  });
+  reporter.start();
+  reporter.report({ bad: true });
+  reporter.report({ good: true });
+  await eventually(() => {
+    assert.equal(calls.length, 2); // bad tried exactly once
+    assert.equal(calls[1].body.good, true);
+    assert.ok(dropped.some((m) => /HTTP 400/.test(m)));
+  });
+  reporter.stop();
+});
+
+test('404 drops and signals onPermanentError once until a success resets it', async () => {
+  const queueFile = tmpQueue();
+  let mode = 404;
+  const { impl, calls } = mockFetch(() =>
+    mode === 404 ? { ok: false, status: 404 } : { ok: true, status: 200 }
+  );
+  const signals = [];
+  const reporter = createReporter({
+    url: 'u', userAgent: 'ua', queueFile, fetchImpl: impl,
+    onPermanentError: (status) => signals.push(status),
+  });
+  reporter.start();
+  reporter.report({ n: 1 });
+  reporter.report({ n: 2 });
+  await eventually(() => assert.equal(calls.length, 2));
+  assert.deepEqual(signals, [404]); // two drops, one signal — no spam
+
+  mode = 200;
+  reporter.report({ n: 3 }); // success resets the once-guard
+  await eventually(() => assert.equal(calls.length, 3));
+  mode = 404;
+  reporter.report({ n: 4 });
+  await eventually(() => assert.deepEqual(signals, [404, 404]));
+  reporter.stop();
+});
+
+test('network error keeps the entry; delivery resumes when fetch recovers', async () => {
+  const queueFile = tmpQueue();
+  let online = false;
+  const { impl, calls } = mockFetch(() => {
+    if (!online) throw new Error('ECONNREFUSED');
+    return { ok: true, status: 201 };
+  });
+  const reporter = createReporter({
+    url: 'u', userAgent: 'ua', queueFile, fetchImpl: impl, backoffBaseMs: 10,
+  });
+  reporter.start();
+  reporter.report({ seq: 0 });
+  reporter.report({ seq: 1 });
+  await eventually(() => assert.ok(calls.length >= 1)); // tried and failed
+  const failedTries = calls.length;
+  online = true;
+  await eventually(() => {
+    // Everything delivered, in order, nothing dropped by the outage.
+    const delivered = calls.slice(failedTries).map((c) => c.body.seq);
+    assert.deepEqual(delivered, [0, 1]);
+    assert.equal(fs.readFileSync(queueFile, 'utf8').trim(), '');
+  });
+  reporter.stop();
+});
+
+test('5xx retries are capped per entry, then the entry drops and the queue moves on', async () => {
+  const queueFile = tmpQueue();
+  const { impl, calls } = mockFetch((call) =>
+    call.body.poison ? { ok: false, status: 500 } : { ok: true, status: 201 }
+  );
+  const reporter = createReporter({
+    url: 'u', userAgent: 'ua', queueFile, fetchImpl: impl,
+    maxAttempts: 3, backoffBaseMs: 5, backoffMaxMs: 10,
+  });
+  reporter.start();
+  reporter.report({ poison: true });
+  reporter.report({ after: true });
+  await eventually(() => {
+    const poisonTries = calls.filter((c) => c.body.poison).length;
+    assert.equal(poisonTries, 3); // exactly maxAttempts, then dropped
+    assert.equal(calls[calls.length - 1].body.after, true);
+  });
+  reporter.stop();
+});
