@@ -14,3 +14,6 @@ helpers, shared identity/nature constants, and a notification manager. Consumed 
 - `createNotifier({ app, pluginId, pathFor, stateFor })` — raise/clear/reannounce
 - `writeLogbookEntry({ url, token, text, observations, extra })` — POST a radio-log entry to signalk-logbook
 - `deviceBeaconFor`, `NATURES`, `NATURE_TEXT`, geo + snapshot helpers
+- `createReporter` / `loadOrCreateReceiverKey` — generic persistent-queue HTTP reporter
+  (write-through JSONL queue, offline catch-up, per-entry retry caps) for submitting
+  received events to services like DSCWatch.com

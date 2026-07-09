@@ -11,6 +11,7 @@ test('public API exposes the full shared surface', () => {
     'createNotifier', 'writeLogbookEntry', 'deviceBeaconFor', 'NATURES', 'NATURE_TEXT',
     'distanceNm', 'bearingDegrees', 'compassWord',
     'captureOwnShip', 'buildObservations',
+    'createReporter', 'loadOrCreateReceiverKey',
   ]) {
     assert.ok(core[name] !== undefined, `missing export: ${name}`);
   }

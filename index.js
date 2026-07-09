@@ -8,6 +8,7 @@ const { buildMarkerResourceSets, CATEGORY_COLORS } = require('./lib/markers');
 const { buildMessage, buildLogbookText, formatPosition } = require('./lib/format');
 const { createNotifier } = require('./lib/notifier');
 const { writeLogbookEntry } = require('./lib/logbook');
+const { createReporter, loadOrCreateReceiverKey } = require('./lib/reporter');
 
 module.exports = {
   ...geo,
@@ -21,4 +22,6 @@ module.exports = {
   formatPosition,
   createNotifier,
   writeLogbookEntry,
+  createReporter,
+  loadOrCreateReceiverKey,
 };
