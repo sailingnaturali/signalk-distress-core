@@ -190,3 +190,56 @@ test('5xx retries are capped per entry, then the entry drops and the queue moves
   });
   reporter.stop();
 });
+
+test('undelivered reports survive a restart and flush in order', async () => {
+  const queueFile = tmpQueue();
+  const offline = mockFetch(() => {
+    throw new Error('ECONNREFUSED');
+  });
+  const first = createReporter({
+    url: 'u', userAgent: 'ua', queueFile, fetchImpl: offline.impl, backoffBaseMs: 5,
+  });
+  first.start();
+  first.report({ seq: 0 });
+  first.report({ seq: 1 });
+  await eventually(() => assert.ok(offline.calls.length >= 1));
+  first.stop(); // "process exit" — queue stays on disk
+
+  const online = mockFetch();
+  const second = createReporter({
+    url: 'u', userAgent: 'ua', queueFile, fetchImpl: online.impl,
+  });
+  second.start();
+  await eventually(() => {
+    assert.deepEqual(online.calls.map((c) => c.body.seq), [0, 1]);
+    assert.equal(fs.readFileSync(queueFile, 'utf8').trim(), '');
+  });
+  second.stop();
+});
+
+test('a torn queue line is skipped; the rest of the queue still delivers', async () => {
+  const queueFile = tmpQueue();
+  fs.writeFileSync(queueFile, `${JSON.stringify({ seq: 0 })}\n{"seq": 1, "torn\n${JSON.stringify({ seq: 2 })}\n`);
+  const { impl, calls } = mockFetch();
+  const reporter = createReporter({ url: 'u', userAgent: 'ua', queueFile, fetchImpl: impl });
+  reporter.start();
+  await eventually(() => assert.deepEqual(calls.map((c) => c.body.seq), [0, 2]));
+  reporter.stop();
+});
+
+test('maxQueue caps growth by dropping oldest', async () => {
+  const queueFile = tmpQueue();
+  const { impl } = mockFetch(() => {
+    throw new Error('offline');
+  });
+  const reporter = createReporter({
+    url: 'u', userAgent: 'ua', queueFile, fetchImpl: impl, maxQueue: 3, backoffBaseMs: 60000,
+  });
+  reporter.start();
+  for (let i = 0; i < 5; i++) reporter.report({ seq: i });
+  await eventually(() => {
+    const lines = fs.readFileSync(queueFile, 'utf8').trim().split('\n').map((l) => JSON.parse(l).seq);
+    assert.deepEqual(lines, [2, 3, 4]);
+  });
+  reporter.stop();
+});
