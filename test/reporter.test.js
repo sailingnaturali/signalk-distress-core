@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { createReporter } = require('../lib/reporter');
+const { createReporter, loadOrCreateReceiverKey } = require('../lib/reporter');
 
 function tmpQueue() {
   return path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'reporter-')), 'queue.jsonl');
@@ -242,4 +242,12 @@ test('maxQueue caps growth by dropping oldest', async () => {
     assert.deepEqual(lines, [2, 3, 4]);
   });
   reporter.stop();
+});
+
+test('loadOrCreateReceiverKey mints a lowercase UUID once and reuses it', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rk-')), 'dscwatch-receiver-key');
+  const key = loadOrCreateReceiverKey(file);
+  assert.match(key, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  assert.equal(loadOrCreateReceiverKey(file), key); // stable across calls
+  assert.equal(fs.readFileSync(file, 'utf8').trim(), key); // persisted
 });
