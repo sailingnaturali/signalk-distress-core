@@ -19,6 +19,7 @@ test('writeLogbookEntry POSTs text/observations with auth headers and radio cate
   assert.equal(body.text, 'hello');
   assert.equal(body.ago, 0);
   assert.equal(body.category, 'radio');
+  assert.equal(body.origin, 'auto');
   assert.equal(body.vhf, '70');
   assert.deepEqual(body.observations, { visibility: 3 });
 });
