@@ -8,7 +8,7 @@ test('public API exposes the full shared surface', () => {
   for (const name of [
     'EventStore', 'buildMarkerResourceSets', 'CATEGORY_COLORS',
     'buildMessage', 'buildLogbookText', 'formatPosition',
-    'createNotifier', 'writeLogbookEntry', 'deviceBeaconFor', 'NATURES', 'NATURE_TEXT',
+    'createNotifier', 'receivedPath', 'writeLogbookEntry', 'deviceBeaconFor', 'NATURES', 'NATURE_TEXT',
     'distanceNm', 'bearingDegrees', 'compassWord',
     'captureOwnShip', 'buildObservations',
     'createReporter', 'loadOrCreateReceiverKey',

@@ -2,12 +2,55 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { createNotifier } = require('../lib/notifier');
+const { createNotifier, receivedPath } = require('../lib/notifier');
 
 function fakeApp() {
   const deltas = [];
-  return { handleMessage: (id, d) => deltas.push({ id, d }), deltas };
+  const putHandlers = {};
+  return {
+    handleMessage: (id, d) => deltas.push({ id, d }),
+    deltas,
+    putHandlers,
+    registerPutHandler: (ctx, path, cb) => { putHandlers[`${ctx}:${path}`] = cb; },
+  };
 }
+
+test('receivedPath keys per call and strips path-reserved chars from the id', () => {
+  const path = receivedPath('distress', 'dsc', '2026-07-17T12:34:56.000Z-338040079');
+  assert.equal(path, 'notifications.received.distress.dsc-2026-07-17T123456000Z-338040079');
+  assert.doesNotMatch(path.split('.').pop(), /[.:]/);
+});
+
+test('with onCleared, raise registers a per-call PUT ack that clears just that call', () => {
+  const app = fakeApp();
+  const cleared = [];
+  const n = createNotifier({
+    app, pluginId: 'test',
+    pathFor: (e) => receivedPath('distress', 'dsc', e.id),
+    stateFor: () => 'emergency',
+    onCleared: (e) => cleared.push(e.id),
+  });
+  const path = n.raise({ id: 'a', message: 'm' });
+  const handler = app.putHandlers[`vessels.self:${path}`];
+  assert.ok(handler, 'a PUT handler was registered at the call path');
+
+  const res = handler();
+  assert.equal(res.state, 'COMPLETED');
+  // Cleared: the notification is nulled and onCleared fired for this call only.
+  assert.equal(app.deltas.at(-1).d.updates[0].values[0].value, null);
+  assert.deepEqual(cleared, ['a']);
+});
+
+test('without onCleared, raise never touches registerPutHandler', () => {
+  const app = fakeApp();
+  const n = createNotifier({
+    app, pluginId: 'test',
+    pathFor: (e) => receivedPath('distress', 'dsc', e.id),
+    stateFor: () => 'emergency',
+  });
+  n.raise({ id: 'a', message: 'm' });
+  assert.equal(Object.keys(app.putHandlers).length, 0);
+});
 
 test('raise emits a notification delta at the event path and state', () => {
   const app = fakeApp();

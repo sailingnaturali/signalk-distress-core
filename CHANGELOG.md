@@ -4,6 +4,22 @@ All notable changes to `@sailingnaturali/signalk-distress-core` are documented h
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `receivedPath(category, transport, id)` — builds the per-call notification key
+  `notifications.received.<category>.<transport>-<id>`, stripping `.`/`:` from the
+  id so an ISO-timestamp id can't split the SignalK path leaf. Lets two concurrent
+  received calls each hold their own alarm instead of stomping one fixed key.
+
+### Changed
+
+- `createNotifier` accepts `onCleared(event)`: when supplied, each raised alarm
+  also gets a PUT handler at its own path, so a consumer can acknowledge the
+  specific alarm it sees; `onCleared` stamps the caller's store so a restart
+  reannounce skips it.
+
 ## [0.5.1]
 
 ### Fixed

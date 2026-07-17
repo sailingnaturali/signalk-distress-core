@@ -6,7 +6,7 @@ const { EventStore } = require('./lib/store');
 const constants = require('./lib/constants');
 const { buildMarkerResourceSets, CATEGORY_COLORS } = require('./lib/markers');
 const { buildMessage, buildLogbookText, formatPosition } = require('./lib/format');
-const { createNotifier } = require('./lib/notifier');
+const { createNotifier, receivedPath } = require('./lib/notifier');
 const { writeLogbookEntry } = require('./lib/logbook');
 const { createReporter, loadOrCreateReceiverKey } = require('./lib/reporter');
 
@@ -21,6 +21,7 @@ module.exports = {
   buildLogbookText,
   formatPosition,
   createNotifier,
+  receivedPath,
   writeLogbookEntry,
   createReporter,
   loadOrCreateReceiverKey,
